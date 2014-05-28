@@ -1,0 +1,2 @@
+@interface DragTextView : UITextView
+@end

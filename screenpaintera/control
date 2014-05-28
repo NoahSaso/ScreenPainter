@@ -1,0 +1,9 @@
+Package: com.sassoty.screenpainter
+Name: ScreenPainterA
+Depends: mobilesubstrate, libactivator
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Begin Drawing. ScreenPainter extension
+Maintainer: Sassoty <sassoty@gmail.com>
+Author: Sassoty <sassoty@gmail.com>
+Section: Tweaks

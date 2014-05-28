@@ -1,0 +1,10 @@
+{
+    entry = {
+	bundle = ScreenPainter;
+	cell = PSLinkCell;
+	detail = ScreenPainterListController;
+	icon = ScreenPainter.png;
+	isController = 1;
+	label = ScreenPainter;
+    };
+}

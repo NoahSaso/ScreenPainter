@@ -1,0 +1,5 @@
+{
+	title = "ScreenPainter";
+    description = "Begin drawing";
+    "compatible-modes" = ("springboard", "application", "lockscreen");
+}

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Settings</string>
+			<key>footerAlignment</key>
+			<integer>1</integer>
+			<key>footerText</key>
+			<string>Disabling this will allow the screenshot to be taken normally, but the Activator action will still work.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.sassoty.screenpainter</string>
+			<key>PostNotification</key>
+			<string>com.sassoty.screenpainter/preferencechanged</string>
+			<key>key</key>
+			<string>enabled</string>
+			<key>label</key>
+			<string>Enabled</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string></string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>BrushListController</string>
+			<key>label</key>
+			<string>Brush Settings</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string></string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.sassoty.screenpainter</string>
+			<key>PostNotification</key>
+			<string>com.sassoty.screenpainter/preferencechanged</string>
+			<key>key</key>
+			<string>flashenabled</string>
+			<key>label</key>
+			<string>Enable Flash Color</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>FlashColorListController</string>
+			<key>label</key>
+			<string>Flash Color</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>About</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Follow @Sassoty</string>
+			<key>icon</key>
+			<string>Twitter.png</string>
+			<key>action</key>
+			<string>openTwitter</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Support the Developer</string>
+			<key>icon</key>
+			<string>PayPal.png</string>
+			<key>action</key>
+			<string>openDonate</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Visit My Website</string>
+			<key>icon</key>
+			<string>Website.png</string>
+			<key>action</key>
+			<string>openWebsite</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerAlignment</key>
+			<integer>1</integer>
+			<key>footerText</key>
+			<string>ScreenPainter © Noah Saso 2014</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>ScreenPainter</string>
+</dict>
+</plist>
