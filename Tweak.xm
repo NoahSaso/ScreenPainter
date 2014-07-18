@@ -93,10 +93,13 @@ void showScreenShot() {
     wind.userInteractionEnabled = YES;
     [wind makeKeyAndVisible];
 
+    UIViewController* vC = [[UIViewController alloc] init];
     drawView = [[DragView alloc] initWithFrame:kBounds];
     //wind.backgroundColor = [[UIColor clearColor] colorWithAlphaComponent:0.5f];
 
-    [wind addSubview:drawView];
+    vC.view = drawView;
+
+    wind.rootViewController = vC;
 
     NSLog(@"[ScreenPainter] Added draw view");
     isAlreadyOn = YES;

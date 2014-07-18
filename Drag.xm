@@ -24,8 +24,11 @@ CGFloat flashgreen = 255.0/255.0;
 CGFloat flashblue = 255.0/255.0;
 CGFloat flashopacity = 1.0;
 
+UIButton* exitBn = nil;
+
 UIButton* optionBn = nil;
 UIButton* shareBn = nil;
+UIButton* doneBn = nil;
 
 BOOL isOn = NO;
 
@@ -134,12 +137,19 @@ static BOOL disableHome = NO;
 
         shareBn = [UIButton buttonWithType:UIButtonTypeCustom];
         [shareBn setBackgroundImage:[UIImage imageNamed:@"shareButton" inBundle:[NSBundle bundleWithPath:@"/Library/PreferenceBundles/ScreenPainter.bundle"]] forState:UIControlStateNormal];
-        [shareBn addTarget:self action:@selector(dismissView) forControlEvents:UIControlEventTouchUpInside];
+        [shareBn addTarget:self action:@selector(showShareSheet) forControlEvents:UIControlEventTouchUpInside];
         shareBn.frame = CGRectMake(kBounds.size.width-47.5, 24, 22.5, 28.8);
         shareBn.alpha = 0.0;
 
+        doneBn = [UIButton buttonWithType:UIButtonTypeSystem];
+        [doneBn setTitle:@"Done" forState:UIControlStateNormal];
+        [doneBn addTarget:self action:@selector(dismissView) forControlEvents:UIControlEventTouchUpInside];
+        doneBn.frame = CGRectMake((kBounds.size.width / 2) - 25, 25, 50, 40);
+        doneBn.alpha = 0.0;
+
         [self addSubview: optionBn];
         [self addSubview: shareBn];
+        [self addSubview: doneBn];
 
         [self becomeFirstResponder];
         [self showDraw:frame];
@@ -186,7 +196,7 @@ static BOOL disableHome = NO;
     [UIView animateWithDuration:0.35
                           delay:0.0
                         options: UIViewAnimationCurveEaseInOut
-                     animations:^{preView.alpha = 0.85; optionBn.alpha = 1.0; shareBn.alpha = 1.0;}
+                     animations:^{preView.alpha = 0.85; optionBn.alpha = 1.0; shareBn.alpha = 1.0; doneBn.alpha = 1.0;}
                      completion:^(BOOL){
                         [UIView animateWithDuration:0.55
                                               delay:0.29
@@ -208,6 +218,39 @@ static BOOL disableHome = NO;
     return YES; 
 }
 */
+
+- (void)showShareSheet {
+
+    [UIView animateWithDuration:0.35
+        delay:0.0
+        options: UIViewAnimationCurveEaseInOut
+        animations:^{preView.alpha = 0.0; optionBn.alpha = 0.0; shareBn.alpha = 0.0; doneBn.alpha = 0.0;}
+        completion:^(BOOL){
+            UIImage* imageToShare = [self getScreenImage];
+            NSLog(@"Got screen image!");
+
+            SBScreenFlash* sbFlash = [%c(SBScreenFlash) sharedInstance];
+            [sbFlash flash];
+            NSLog(@"[ScreenPainter] Flashed!");
+
+            Ivar ivar = class_getInstanceVariable([UIView class], "_viewDelegate");
+            UIViewController *controller = object_getIvar(self, ivar);
+
+            UIActivityViewController* activityVC = [[UIActivityViewController alloc] initWithActivityItems:@[imageToShare] applicationActivities:nil];
+            [activityVC setCompletionHandler:^(NSString* activityType, BOOL) {
+                if(!activityType) {
+                    [self reload];
+                    return;
+                }
+                changingColor = NO;
+                isOn = NO;
+                [self removeMe];
+            }];
+            //activityVC.excludedActivityTypes = @[UIActivityTypeSaveToCameraRoll, UIActivityTypeCopyToPasteboard];
+            [controller presentViewController:activityVC animated:YES completion:nil];
+    }];
+
+}
 
 - (void)pressedOption {
     if(isEditingText) {
@@ -284,18 +327,22 @@ static BOOL disableHome = NO;
                 break;
             case 4:
                 isOn = YES;
+                [self reload];
                 break;
             case 5:
                 [self saveToCameraRoll];
+                [self reload];
                 isOn = YES;
                 break;
             case 6:
                 [self copyToClipboard];
+                [self reload];
                 isOn = YES;
                 break;
             case 7:
                 [self saveToCameraRoll];
                 [self copyToClipboard];
+                [self reload];
                 isOn = YES;
                 break;
             default:
@@ -327,6 +374,16 @@ static BOOL disableHome = NO;
                 break;
         }
     }
+}
+
+- (void)reload {
+    [UIView animateWithDuration:0.35
+        delay:0.0
+        options: UIViewAnimationCurveEaseInOut
+        animations:^{optionBn.alpha = 1.0; shareBn.alpha = 1.0; doneBn.alpha = 1.0;}
+        completion:^(BOOL){
+            NSLog(@"[ScreenPainter] Reloaded!");
+        }];
 }
 
 - (void)showEndAlert {
@@ -375,11 +432,14 @@ static BOOL disableHome = NO;
     isOn = NO;
     changingColor = YES;
 
-    chgColorView = [[UIView alloc] initWithFrame:kBounds];
+    CGRect theNewBounds = kBounds;
+    theNewBounds.size.height-=20;
+    theNewBounds.origin.y = 20;
+    chgColorView = [[UIView alloc] initWithFrame:theNewBounds];
     [chgColorView setBackgroundColor:[UIColor whiteColor]];
     chgColorView.alpha = 0.0;
 
-    CGRect frame = CGRectMake(40, 80, 260, 10);
+    CGRect frame = CGRectMake(40, 50, 260, 10);
     UISlider* brushSlider = [[UISlider alloc] initWithFrame:frame];
     frame.origin.y+=50;
     UISlider* redSlider = [[UISlider alloc] initWithFrame:frame];
@@ -388,7 +448,7 @@ static BOOL disableHome = NO;
     frame.origin.y+=50;
     UISlider* blueSlider = [[UISlider alloc] initWithFrame:frame];
 
-    CGRect frameLabel = CGRectMake(10, 80-5, 20, 15);
+    CGRect frameLabel = CGRectMake(10, 50-5, 20, 15);
     UILabel* sLab = [[UILabel alloc] initWithFrame:frameLabel];
     sLab.font = [UIFont systemFontOfSize:12.5];
     sLab.text = @"S:";
@@ -446,7 +506,7 @@ static BOOL disableHome = NO;
     [chgColorView addSubview:greenSlider];
     [chgColorView addSubview:blueSlider];
 
-    chgPreView = [[UIImageView alloc] initWithFrame:CGRectMake(((kBounds.size.width/2)-45), ((kBounds.size.height/2)-45)+100, 90, 90)];
+    chgPreView = [[UIImageView alloc] initWithFrame:CGRectMake(((kBounds.size.width/2)-45), ((kBounds.size.height/2)-45)+70, 90, 90)];
 
     UIGraphicsBeginImageContext(chgPreView.frame.size);
     CGContextSetLineCap(UIGraphicsGetCurrentContext(), kCGLineCapRound);
@@ -460,6 +520,12 @@ static BOOL disableHome = NO;
 
     [chgColorView addSubview:chgPreView];
 
+    exitBn = [UIButton buttonWithType:UIButtonTypeSystem];
+    [exitBn addTarget:self action:@selector(exitChgColorView) forControlEvents:UIControlEventTouchUpInside];
+    exitBn.titleLabel.text = @"Exit";
+    exitBn.frame = CGRectMake((kBounds.size.width / 2) - 50, (chgPreView.frame.origin.y+90)+20, 50, 40);
+    [chgColorView addSubview:exitBn];
+
     [self addSubview:chgColorView];
     [self bringSubviewToFront:chgColorView];
 
@@ -469,6 +535,19 @@ static BOOL disableHome = NO;
         animations:^{chgColorView.alpha = 1.0;}
         completion:nil];
 
+}
+- (void)exitChgColorView {
+    changingColor = NO;
+    isOn = YES;
+    [UIView animateWithDuration:0.65
+        delay:0.0
+        options: UIViewAnimationCurveEaseInOut
+        animations:^{chgColorView.alpha = 0.0;}
+        completion:^(BOOL){
+            [chgColorView removeFromSuperview];
+            [chgColorView release];
+            NSLog(@"[ScreenPainter] Removed change color from screen!");
+        }];
 }
 - (void)addTextBox {
     CGRect frameForTV = CGRectMake((kBounds.size.width/2)-50, (kBounds.size.height/2)-50, 100, 100);
@@ -558,12 +637,8 @@ void reloadPrefs() {
     [UIView animateWithDuration:0.35
         delay:0.0
         options: UIViewAnimationCurveEaseInOut
-        animations:^{preView.alpha = 0.0; optionBn.alpha = 0.0; shareBn.alpha = 0.0;}
+        animations:^{preView.alpha = 0.0; optionBn.alpha = 0.0; shareBn.alpha = 0.0; doneBn.alpha = 0.0;}
         completion:^(BOOL){
-            [preView removeFromSuperview];
-            [optionBn removeFromSuperview];
-            [shareBn removeFromSuperview];
-
             latestScreenImage = [self getScreenImage];
             NSLog(@"Got screen image!");
 
