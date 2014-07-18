@@ -27,6 +27,32 @@
 			<string>enabled</string>
 			<key>label</key>
 			<string>Enabled</string>
+			<key>icon</key>
+			<string>Check.png</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerAlignment</key>
+			<integer>1</integer>
+			<key>footerText</key>
+			<string>Disables the ability to end the drawing session with the home button. You must use the share button in the top right corner of the screen.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.sassoty.screenpainter</string>
+			<key>PostNotification</key>
+			<string>com.sassoty.screenpainter/preferencechanged</string>
+			<key>key</key>
+			<string>disablehome</string>
+			<key>label</key>
+			<string>Disable Home Button</string>
+			<key>icon</key>
+			<string>DisableHome.png</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -41,6 +67,8 @@
 			<string>BrushListController</string>
 			<key>label</key>
 			<string>Brush Settings</string>
+			<key>icon</key>
+			<string>Brush.png</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -61,6 +89,8 @@
 			<string>flashenabled</string>
 			<key>label</key>
 			<string>Enable Flash Color</string>
+			<key>icon</key>
+			<string>Check.png</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -69,6 +99,8 @@
 			<string>FlashColorListController</string>
 			<key>label</key>
 			<string>Flash Color</string>
+			<key>icon</key>
+			<string>Flash.png</string>
 		</dict>
 		<dict>
 			<key>cell</key>

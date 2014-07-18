@@ -2,13 +2,13 @@
 #import "DragTextView.h"
 #import <UIKit/UIKit.h>
 
-#define bounds [[UIScreen mainScreen] bounds]
+#define kBounds [[UIScreen mainScreen] bounds]
 
 extern "C" UIImage* _UICreateScreenUIImage();
 
 //Define variables
 UIImageView* mainDrawImage = nil;
-UIView* preView;
+UIView* preView = nil;
 UIImage* latestScreenImage = nil;
 UIColor* bgColor = [[UIColor clearColor] colorWithAlphaComponent:0.5f];
 BOOL mouseSwiped = NO;
@@ -24,9 +24,10 @@ CGFloat flashgreen = 255.0/255.0;
 CGFloat flashblue = 255.0/255.0;
 CGFloat flashopacity = 1.0;
 
-BOOL isOn = NO;
+UIButton* optionBn = nil;
+UIButton* shareBn = nil;
 
-BOOL preViewIsVisible = NO;
+BOOL isOn = NO;
 
 BOOL isEditingText = NO;
 
@@ -36,22 +37,27 @@ UIImageView* chgPreView = nil;
 
 static NSString* settingsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.sassoty.screenpainter.plist"];
 static NSMutableDictionary* prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
-static BOOL isEnabled = YES;
-static BOOL isFlashEnabled = YES;
+static BOOL isEnabled, isFlashEnabled = YES;
+static BOOL disableHome = NO;
 
 @interface SpringBoard
 - (void)_giveUpOnMenuDoubleTap;
 - (void)cancelMenuButtonRequests;
 @end
 
+@interface UIImage (Private)
++ (UIImage *)imageNamed:(NSString *)named inBundle:(NSBundle *)bundle;
+@end
+
 %hook SpringBoard
 
 - (void)_handleMenuButtonEvent{
 
-    if(isOn){
+    if(isOn && !disableHome) {
         NSLog(@"[ScreenPainter] Pressed home button!");
         [self _giveUpOnMenuDoubleTap];
         [self cancelMenuButtonRequests];
+
         [[NSNotificationCenter defaultCenter] 
             postNotificationName:@"com.sassoty.screenpainter/homebutton" 
             object:nil];
@@ -69,10 +75,11 @@ static BOOL isFlashEnabled = YES;
                 [chgColorView release];
                 NSLog(@"[ScreenPainter] Removed change color from screen!");
             }];
-    }else if(isEditingText){
+    }else if(isEditingText || (isOn && disableHome)) {
         [self _giveUpOnMenuDoubleTap];
         [self cancelMenuButtonRequests];
-    }else { %orig; }
+    }
+    else { %orig; }
 
 }
 
@@ -110,12 +117,30 @@ static BOOL isFlashEnabled = YES;
 - (id)initWithFrame:(CGRect)frame {
 	if(self = [super initWithFrame:frame]){
         reloadPrefs();
+
         isOn = YES;
+
         //Define observer
         [[NSNotificationCenter defaultCenter] addObserver:self
-            selector:@selector(dismissView:) 
+            selector:@selector(dismissView) 
             name:@"com.sassoty.screenpainter/homebutton"
             object:nil];
+
+        //Define buttons
+        optionBn = [UIButton buttonWithType:UIButtonTypeInfoDark];
+        [optionBn addTarget:self action:@selector(pressedOption) forControlEvents:UIControlEventTouchUpInside];
+        optionBn.frame = CGRectMake(25, 25, 30, 30);
+        optionBn.alpha = 0.0;
+
+        shareBn = [UIButton buttonWithType:UIButtonTypeCustom];
+        [shareBn setBackgroundImage:[UIImage imageNamed:@"shareButton" inBundle:[NSBundle bundleWithPath:@"/Library/PreferenceBundles/ScreenPainter.bundle"]] forState:UIControlStateNormal];
+        [shareBn addTarget:self action:@selector(dismissView) forControlEvents:UIControlEventTouchUpInside];
+        shareBn.frame = CGRectMake(kBounds.size.width-47.5, 24, 22.5, 28.8);
+        shareBn.alpha = 0.0;
+
+        [self addSubview: optionBn];
+        [self addSubview: shareBn];
+
         [self becomeFirstResponder];
         [self showDraw:frame];
 	}
@@ -136,8 +161,8 @@ static BOOL isFlashEnabled = YES;
     int daWidth = 165;
     int daHeight = 115;
     CGRect frame = CGRectMake(0,0,0,0);
-    frame.origin.x = (bounds.size.width/2)-(daWidth/2);
-    frame.origin.y = (bounds.size.height/2)-(daHeight/2);
+    frame.origin.x = (kBounds.size.width/2)-(daWidth/2);
+    frame.origin.y = (kBounds.size.height/2)-(daHeight/2);
     frame.size.width = daWidth;
     frame.size.height = daHeight;
 
@@ -158,32 +183,33 @@ static BOOL isFlashEnabled = YES;
 
     [self addSubview:preView];
 
-    preViewIsVisible = YES;
-
     [UIView animateWithDuration:0.35
                           delay:0.0
                         options: UIViewAnimationCurveEaseInOut
-                     animations:^{preView.alpha = 0.85;}
+                     animations:^{preView.alpha = 0.85; optionBn.alpha = 1.0; shareBn.alpha = 1.0;}
                      completion:^(BOOL){
                         [UIView animateWithDuration:0.55
                                               delay:0.29
                                             options: UIViewAnimationCurveEaseInOut
                                          animations:^{preView.alpha = 0.0;}
                                          completion:^(BOOL){
+                                            /*
                                             [preView removeFromSuperview];
                                             [preView release];
-                                            preViewIsVisible = NO;
+                                            */
                                             NSLog(@"[ScreenPainter] Draw view gone");
                                          }];
                      }];
 
 }
 
+/*
 - (BOOL)canBecomeFirstResponder{ 
     return YES; 
 }
+*/
 
-- (void)pressedI {
+- (void)pressedOption {
     if(isEditingText) {
         UIAlertView *alert = [[UIAlertView alloc]
             initWithTitle:@"ScreenPainter"
@@ -229,7 +255,6 @@ static BOOL isFlashEnabled = YES;
         @"Add text box",
         nil];
     [alert show];[alert release];
-
 }
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
@@ -350,7 +375,7 @@ static BOOL isFlashEnabled = YES;
     isOn = NO;
     changingColor = YES;
 
-    chgColorView = [[UIView alloc] initWithFrame:bounds];
+    chgColorView = [[UIView alloc] initWithFrame:kBounds];
     [chgColorView setBackgroundColor:[UIColor whiteColor]];
     chgColorView.alpha = 0.0;
 
@@ -421,7 +446,7 @@ static BOOL isFlashEnabled = YES;
     [chgColorView addSubview:greenSlider];
     [chgColorView addSubview:blueSlider];
 
-    chgPreView = [[UIImageView alloc] initWithFrame:CGRectMake(((bounds.size.width/2)-45), ((bounds.size.height/2)-45)+100, 90, 90)];
+    chgPreView = [[UIImageView alloc] initWithFrame:CGRectMake(((kBounds.size.width/2)-45), ((kBounds.size.height/2)-45)+100, 90, 90)];
 
     UIGraphicsBeginImageContext(chgPreView.frame.size);
     CGContextSetLineCap(UIGraphicsGetCurrentContext(), kCGLineCapRound);
@@ -446,7 +471,7 @@ static BOOL isFlashEnabled = YES;
 
 }
 - (void)addTextBox {
-    CGRect frameForTV = CGRectMake((bounds.size.width/2)-50, (bounds.size.height/2)-50, 100, 100);
+    CGRect frameForTV = CGRectMake((kBounds.size.width/2)-50, (kBounds.size.height/2)-50, 100, 100);
     DragTextView* newTextView = [[DragTextView alloc] initWithFrame:frameForTV];
     newTextView.backgroundColor = [[UIColor clearColor] colorWithAlphaComponent:0.47f];
     newTextView.font = [UIFont systemFontOfSize:15.0];
@@ -503,6 +528,8 @@ void reloadPrefs() {
     if(prefs[@"enabled"]==nil) isEnabled = YES;
     isFlashEnabled = [prefs[@"flashenabled"] boolValue];
     if(prefs[@"flashenabled"]==nil) isFlashEnabled = YES;
+    disableHome = [prefs[@"disablehome"] boolValue];
+    if(prefs[@"disablehome"]==nil) disableHome = NO;
 
     brush = [prefs[@"brush"] floatValue];
     if(!prefs[@"brush"]) brush = 10.0;
@@ -526,28 +553,32 @@ void reloadPrefs() {
 
 }
 
-- (void)dismissView:(NSNotification* )notification {
+- (void)dismissView {
 
-    if(preViewIsVisible){
-        NSLog(@"[ScreenPainter] Remove preView so screenshot doesn't suck!");
-        preView.alpha = 0.0;
-        [preView removeFromSuperview];
-        [preView release];
-        preView = nil;
-    }
+    [UIView animateWithDuration:0.35
+        delay:0.0
+        options: UIViewAnimationCurveEaseInOut
+        animations:^{preView.alpha = 0.0; optionBn.alpha = 0.0; shareBn.alpha = 0.0;}
+        completion:^(BOOL){
+            [preView removeFromSuperview];
+            [optionBn removeFromSuperview];
+            [shareBn removeFromSuperview];
 
-    latestScreenImage = [self getScreenImage];
+            latestScreenImage = [self getScreenImage];
+            NSLog(@"Got screen image!");
 
-    SBScreenFlash* sbFlash = [%c(SBScreenFlash) sharedInstance];
-    [sbFlash flash];
-    NSLog(@"[ScreenPainter] Flashed!");
+            SBScreenFlash* sbFlash = [%c(SBScreenFlash) sharedInstance];
+            [sbFlash flash];
+            NSLog(@"[ScreenPainter] Flashed!");
 
-    [self performSelector:@selector(showEndAlert) withObject:nil afterDelay:0.4];
+            [self performSelector:@selector(showEndAlert) withObject:nil afterDelay:0.4];
+    }];
 
 }
 
 - (UIImage* )getScreenImage {
     //Get screenshot
+    NSLog(@"Getting screen image....");
     return _UICreateScreenUIImage();
 }
 
