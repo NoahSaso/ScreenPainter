@@ -1,9 +1,11 @@
+GO_EASY_ON_ME = 1
+
 export ARCHS = armv7 arm64 armv7s
 
 include theos/makefiles/common.mk
 
 TWEAK_NAME = ScreenPainter
-ScreenPainter_FILES = Tweak.xm Drag.xm DragTextView.mm
+ScreenPainter_FILES = Tweak.xm Drag.xm DragTextView.mm iOSVersion/iOSVersion.m
 ScreenPainter_FRAMEWORKS = UIKit CoreGraphics
 ScreenPainter_PRIVATE_FRAMEWORKS = Preferences
 

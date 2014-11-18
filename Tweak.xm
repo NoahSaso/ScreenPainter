@@ -90,7 +90,6 @@ void showScreenShot() {
     wind = [[UIWindow alloc] initWithFrame:kBounds];
     //wind = [[UIApplication sharedApplication] keyWindow];
     wind.windowLevel = UIWindowLevelStatusBar;
-    wind.userInteractionEnabled = YES;
     [wind makeKeyAndVisible];
 
     UIViewController* vC = [[UIViewController alloc] init];

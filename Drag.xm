@@ -2,6 +2,8 @@
 #import "DragTextView.h"
 #import <UIKit/UIKit.h>
 
+#import "iOSVersion/iOSVersion.m"
+
 #define kBounds [[UIScreen mainScreen] bounds]
 
 extern "C" UIImage* _UICreateScreenUIImage();
@@ -24,8 +26,6 @@ CGFloat flashgreen = 255.0/255.0;
 CGFloat flashblue = 255.0/255.0;
 CGFloat flashopacity = 1.0;
 
-UIButton* exitBn = nil;
-
 UIButton* optionBn = nil;
 UIButton* shareBn = nil;
 UIButton* doneBn = nil;
@@ -43,54 +43,23 @@ static NSMutableDictionary* prefs = [[NSMutableDictionary alloc] initWithContent
 static BOOL isEnabled, isFlashEnabled = YES;
 static BOOL disableHome = NO;
 
-@interface SpringBoard
-- (void)_giveUpOnMenuDoubleTap;
+BOOL justExited = NO;
+
+@interface SpringBoard : UIApplication
 - (void)cancelMenuButtonRequests;
+- (void)clearMenuButtonTimer;
 @end
 
 @interface UIImage (Private)
 + (UIImage *)imageNamed:(NSString *)named inBundle:(NSBundle *)bundle;
 @end
 
-%hook SpringBoard
-
-- (void)_handleMenuButtonEvent{
-
-    if(isOn && !disableHome) {
-        NSLog(@"[ScreenPainter] Pressed home button!");
-        [self _giveUpOnMenuDoubleTap];
-        [self cancelMenuButtonRequests];
-
-        [[NSNotificationCenter defaultCenter] 
-            postNotificationName:@"com.sassoty.screenpainter/homebutton" 
-            object:nil];
-    }else if(changingColor) {
-        [self _giveUpOnMenuDoubleTap];
-        [self cancelMenuButtonRequests];
-        changingColor = NO;
-        isOn = YES;
-        [UIView animateWithDuration:0.65
-            delay:0.0
-            options: UIViewAnimationCurveEaseInOut
-            animations:^{chgColorView.alpha = 0.0;}
-            completion:^(BOOL){
-                [chgColorView removeFromSuperview];
-                [chgColorView release];
-                NSLog(@"[ScreenPainter] Removed change color from screen!");
-            }];
-    }else if(isEditingText || (isOn && disableHome)) {
-        [self _giveUpOnMenuDoubleTap];
-        [self cancelMenuButtonRequests];
-    }
-    else { %orig; }
-
-}
-
-%end
-
 %hook SBScreenFlash
-
-- (void)flash {
+%group iOSOther
+%new +(id)mySharedInstance {
+    return [self sharedInstance];
+}
+-(void)flash {
 
     prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
 
@@ -111,6 +80,79 @@ static BOOL disableHome = NO;
     }else{
         %orig;
     }
+
+}
+%end
+%group iOS8
+%new +(id)mySharedInstance {
+    return [self mainScreenFlasher];
+}
+%new -(void)flash {
+
+    prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
+
+    isFlashEnabled = [prefs[@"flashenabled"] boolValue];
+    if(prefs[@"flashenabled"]==nil) isFlashEnabled = YES;
+    flashred = ([prefs[@"flashred"] floatValue])/255.0;
+    if(!prefs[@"flashred"]) flashred = 255.0/255.0;
+    flashgreen = ([prefs[@"flashgreen"] floatValue])/255.0;
+    if(!prefs[@"flashgreen"]) flashgreen = 255.0/255.0;
+    flashblue = ([prefs[@"flashblue"] floatValue])/255.0;
+    if(!prefs[@"flashblue"]) flashblue = 255.0/255.0;
+    flashopacity = [prefs[@"flashopacity"] floatValue];
+    if(!prefs[@"flashopacity"]) flashopacity = 1.0;
+
+    if(isFlashEnabled){
+        UIColor* fColor = [UIColor colorWithRed:flashred green:flashgreen blue:flashblue alpha:flashopacity];
+        [self flashColor:fColor withCompletion:nil];
+    }else{
+        [self flashWhiteWithCompletion:nil];
+    }
+
+}
+%end
+%end
+
+%group All
+%hook SpringBoard
+
+- (void)_handleMenuButtonEvent{
+
+    if(justExited) {
+        [self cancelMenuButtonRequests];
+        [self clearMenuButtonTimer];
+        justExited = NO;
+        %orig;
+    }
+
+    if(isOn && !disableHome) {
+        NSLog(@"[ScreenPainter] Pressed home button!");
+        [self cancelMenuButtonRequests];
+        [self clearMenuButtonTimer];
+
+        [[NSNotificationCenter defaultCenter] 
+            postNotificationName:@"com.sassoty.screenpainter/homebutton" 
+            object:nil];
+    }else if(changingColor) {
+        [self cancelMenuButtonRequests];
+        [self clearMenuButtonTimer];
+        changingColor = NO;
+        isOn = YES;
+        [UIView animateWithDuration:0.65
+            delay:0.0
+            options: UIViewAnimationCurveEaseInOut
+            animations:^{chgColorView.alpha = 0.0;}
+            completion:^(BOOL){
+                [chgColorView removeFromSuperview];
+                [chgColorView release];
+                NSLog(@"[ScreenPainter] Removed change color from screen!");
+            }];
+    }else if(isEditingText || (isOn && disableHome)) {
+        [self cancelMenuButtonRequests];
+        [self clearMenuButtonTimer];
+    }
+    else { %orig; }
+
 }
 
 %end
@@ -229,7 +271,7 @@ static BOOL disableHome = NO;
             UIImage* imageToShare = [self getScreenImage];
             NSLog(@"Got screen image!");
 
-            SBScreenFlash* sbFlash = [%c(SBScreenFlash) sharedInstance];
+            SBScreenFlash* sbFlash = [%c(SBScreenFlash) mySharedInstance];
             [sbFlash flash];
             NSLog(@"[ScreenPainter] Flashed!");
 
@@ -439,7 +481,7 @@ static BOOL disableHome = NO;
     [chgColorView setBackgroundColor:[UIColor whiteColor]];
     chgColorView.alpha = 0.0;
 
-    CGRect frame = CGRectMake(40, 50, 260, 10);
+    CGRect frame = CGRectMake(40, 50, kBounds.size.width - 80, 25);
     UISlider* brushSlider = [[UISlider alloc] initWithFrame:frame];
     frame.origin.y+=50;
     UISlider* redSlider = [[UISlider alloc] initWithFrame:frame];
@@ -448,37 +490,13 @@ static BOOL disableHome = NO;
     frame.origin.y+=50;
     UISlider* blueSlider = [[UISlider alloc] initWithFrame:frame];
 
-    CGRect frameLabel = CGRectMake(10, 50-5, 20, 15);
-    UILabel* sLab = [[UILabel alloc] initWithFrame:frameLabel];
-    sLab.font = [UIFont systemFontOfSize:12.5];
-    sLab.text = @"S:";
-    frameLabel.origin.y+=50;
-    UILabel* rLab = [[UILabel alloc] initWithFrame:frameLabel];
-    rLab.font = [UIFont systemFontOfSize:14.0];
-    rLab.text = @"R:";
-    rLab.textColor = [UIColor redColor];
-    frameLabel.origin.y+=50;
-    UILabel* gLab = [[UILabel alloc] initWithFrame:frameLabel];
-    gLab.font = [UIFont systemFontOfSize:14.0];
-    gLab.text = @"G:";
-    gLab.textColor = [UIColor greenColor];
-    frameLabel.origin.y+=50;
-    UILabel* bLab = [[UILabel alloc] initWithFrame:frameLabel];
-    bLab.font = [UIFont systemFontOfSize:14.0];
-    bLab.text = @"B:";
-    bLab.textColor = [UIColor blueColor];
-
-    [chgColorView addSubview:sLab];
-    [chgColorView addSubview:rLab];
-    [chgColorView addSubview:gLab];
-    [chgColorView addSubview:bLab];
-
     [brushSlider addTarget:self action:@selector(updateBrush:) forControlEvents:UIControlEventValueChanged];
     [brushSlider setBackgroundColor:[UIColor clearColor]];
     brushSlider.minimumValue = 1.0;
     brushSlider.maximumValue = 70.0;
     brushSlider.continuous = YES;
     brushSlider.value = brush;
+    brushSlider.minimumTrackTintColor = [UIColor darkGrayColor];
 
     [redSlider addTarget:self action:@selector(updateRed:) forControlEvents:UIControlEventValueChanged];
     [redSlider setBackgroundColor:[UIColor clearColor]];
@@ -486,6 +504,7 @@ static BOOL disableHome = NO;
     redSlider.maximumValue = 255.0;
     redSlider.continuous = YES;
     redSlider.value = red*255.0;
+    redSlider.minimumTrackTintColor = [UIColor redColor];
 
     [greenSlider addTarget:self action:@selector(updateGreen:) forControlEvents:UIControlEventValueChanged];
     [greenSlider setBackgroundColor:[UIColor clearColor]];
@@ -493,6 +512,7 @@ static BOOL disableHome = NO;
     greenSlider.maximumValue = 255.0;
     greenSlider.continuous = YES;
     greenSlider.value = green*255.0;
+    greenSlider.minimumTrackTintColor = [UIColor greenColor];
 
     [blueSlider addTarget:self action:@selector(updateBlue:) forControlEvents:UIControlEventValueChanged];
     [blueSlider setBackgroundColor:[UIColor clearColor]];
@@ -500,6 +520,7 @@ static BOOL disableHome = NO;
     blueSlider.maximumValue = 255.0;
     blueSlider.continuous = YES;
     blueSlider.value = blue*255.0;
+    blueSlider.minimumTrackTintColor = [UIColor blueColor];
 
     [chgColorView addSubview:brushSlider];
     [chgColorView addSubview:redSlider];
@@ -520,16 +541,18 @@ static BOOL disableHome = NO;
 
     [chgColorView addSubview:chgPreView];
 
-    exitBn = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIButton* exitBn = [UIButton buttonWithType:UIButtonTypeSystem];
     [exitBn addTarget:self action:@selector(exitChgColorView) forControlEvents:UIControlEventTouchUpInside];
-    exitBn.titleLabel.text = @"Exit";
-    exitBn.frame = CGRectMake((kBounds.size.width / 2) - 50, (chgPreView.frame.origin.y+90)+20, 50, 40);
+    [exitBn setTitle:@"Exit" forState:UIControlStateNormal];
+    exitBn.titleLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:22];
+    exitBn.titleLabel.textAlignment = NSTextAlignmentCenter;
+    exitBn.frame = CGRectMake((kBounds.size.width / 2) - 30, (chgPreView.frame.origin.y+90)+35, 60, 40);
     [chgColorView addSubview:exitBn];
 
     [self addSubview:chgColorView];
     [self bringSubviewToFront:chgColorView];
 
-    [UIView animateWithDuration:0.65
+    [UIView animateWithDuration:0.4
         delay:0.0
         options: UIViewAnimationCurveEaseInOut
         animations:^{chgColorView.alpha = 1.0;}
@@ -539,7 +562,7 @@ static BOOL disableHome = NO;
 - (void)exitChgColorView {
     changingColor = NO;
     isOn = YES;
-    [UIView animateWithDuration:0.65
+    [UIView animateWithDuration:0.4
         delay:0.0
         options: UIViewAnimationCurveEaseInOut
         animations:^{chgColorView.alpha = 0.0;}
@@ -642,7 +665,7 @@ void reloadPrefs() {
             latestScreenImage = [self getScreenImage];
             NSLog(@"Got screen image!");
 
-            SBScreenFlash* sbFlash = [%c(SBScreenFlash) sharedInstance];
+            SBScreenFlash* sbFlash = [%c(SBScreenFlash) mySharedInstance];
             [sbFlash flash];
             NSLog(@"[ScreenPainter] Flashed!");
 
@@ -654,7 +677,8 @@ void reloadPrefs() {
 - (UIImage* )getScreenImage {
     //Get screenshot
     NSLog(@"Getting screen image....");
-    return _UICreateScreenUIImage();
+    UIImage *screenImage = _UICreateScreenUIImage();
+    return screenImage;
 }
 
 - (void)copyToClipboard {
@@ -679,6 +703,7 @@ void reloadPrefs() {
         NULL,
         true
         );
+    justExited = YES;
 }
 
 - (void)touchesBegan:(NSSet* )touches withEvent:(UIEvent* )event {
@@ -734,8 +759,16 @@ void reloadPrefs() {
 }
 
 @end
+%end
 
 %ctor {
+
+    if(SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
+        %init(iOS8);
+    }else {
+        %init(iOSOther);
+    }
+    %init(All);
 
     reloadPrefs();
 

@@ -1,7 +1,7 @@
 #import <Preferences/Preferences.h>
 #import "globalHeaders.h"
 
-#define url(x) [[UIApplication sharedApplication] openURL:[NSURL URLWithString:x]];
+#define url(x) [[UIApplication sharedApplication] openURL:[NSURL URLWithString:x]]
 
 #define bounds [[UIScreen mainScreen] bounds]
 #define HEIGHT bounds.size.height
